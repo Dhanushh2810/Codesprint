@@ -1,0 +1,242 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum ProblemStatus {
+  NOT_ATTEMPTED
+  ATTEMPTED
+  SOLVED
+}
+
+enum SubmissionStatus {
+  ACCEPTED
+  WRONG_ANSWER
+  COMPILATION_ERROR
+  RUNTIME_ERROR
+  TIME_LIMIT_EXCEEDED
+  MEMORY_LIMIT_EXCEEDED
+  PENDING
+}
+
+enum SkillLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum ActivityType {
+  PROBLEM_SOLVED
+  SUBMISSION_ACCEPTED
+  PROBLEM_ATTEMPTED
+  COMPANY_TARGETED
+  COMPANY_UNTARGETED
+}
+
+model User {
+  id                  String      @id
+  email               String      @unique
+  name                String
+  college             String?
+  graduationYear      Int?
+  skillLevel          SkillLevel?
+  onboardingCompleted Boolean     @default(false)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  targetCompanies UserTargetCompany[]
+  userProblems    UserProblem[]
+  submissions     Submission[]
+  activities      UserActivity[]
+  topicFocus      UserTopicFocus[]
+
+  @@index([email])
+}
+
+model Company {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  logoUrl     String?
+  accentColor String   @default("#6366f1")
+  createdAt   DateTime @default(now())
+
+  problems CompanyProblem[]
+  targets  UserTargetCompany[]
+
+  @@index([slug])
+}
+
+model Topic {
+  id   String @id @default(cuid())
+  name String @unique
+  slug String @unique
+
+  problems ProblemTopic[]
+  users    UserTopicFocus[]
+}
+
+model Problem {
+  id            String     @id @default(cuid())
+  title         String
+  slug          String     @unique
+  description   String
+  difficulty    Difficulty
+  constraints   String
+  examples      String
+  followUp      String?
+  timeLimitMs   Int        @default(2000)
+  memoryLimitKb Int        @default(256000)
+  popularity    Int        @default(0)
+  starterCode   String
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  companies    CompanyProblem[]
+  topics       ProblemTopic[]
+  testCases    TestCase[]
+  submissions  Submission[]
+  userProblems UserProblem[]
+
+  @@index([difficulty])
+  @@index([createdAt])
+  @@index([popularity])
+}
+
+model CompanyProblem {
+  companyId String
+  problemId String
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@id([companyId, problemId])
+  @@index([companyId])
+  @@index([problemId])
+}
+
+model ProblemTopic {
+  problemId String
+  topicId   String
+
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  topic   Topic   @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@id([problemId, topicId])
+  @@index([topicId])
+}
+
+model UserTargetCompany {
+  userId    String
+  companyId String
+  sortOrder Int    @default(0)
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@id([userId, companyId])
+  @@index([userId])
+  @@index([companyId])
+}
+
+model UserTopicFocus {
+  userId  String
+  topicId String
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@id([userId, topicId])
+}
+
+model UserProblem {
+  userId            String
+  problemId         String
+  status            ProblemStatus @default(NOT_ATTEMPTED)
+  attempts          Int           @default(0)
+  lastAttemptedAt   DateTime?
+  solvedAt          DateTime?
+  bestRuntimeMs     Int?
+  bestMemoryKb      Int?
+  preferredLanguage String?
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@id([userId, problemId])
+  @@index([userId])
+  @@index([problemId])
+  @@index([status])
+}
+
+model Submission {
+  id           String           @id @default(cuid())
+  userId       String
+  problemId    String
+  language     String
+  sourceCode   String
+  status       SubmissionStatus
+  runtimeMs    Int?
+  memoryKb     Int?
+  passedTests  Int              @default(0)
+  totalTests   Int              @default(0)
+  errorMessage String?
+  createdAt    DateTime         @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([problemId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model TestCase {
+  id             String  @id @default(cuid())
+  problemId      String
+  input          String
+  expectedOutput String
+  isSample       Boolean @default(false)
+  sortOrder      Int     @default(0)
+
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@index([problemId])
+  @@index([problemId, isSample])
+}
+
+model UserActivity {
+  id        String       @id @default(cuid())
+  userId    String
+  type      ActivityType
+  message   String
+  metadata  String?
+  createdAt DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model DailyActivity {
+  userId String
+  date   DateTime
+  count  Int      @default(0)
+
+  @@id([userId, date])
+  @@index([userId])
+}
