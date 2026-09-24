@@ -67,71 +67,50 @@ export default function ProblemsPage() {
         </div>
 
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-6">
-          <Input
-            placeholder="Search by title..."
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            className="lg:col-span-2"
-          />
-          <Select value={company} onValueChange={(v) => setCompany(v ?? "all")}>
-            <SelectTrigger>
-              <SelectValue placeholder="Company" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All companies</SelectItem>
-              {companies.map((c) => (
-                <SelectItem key={c.slug} value={c.slug}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={topic} onValueChange={(v) => setTopic(v ?? "all")}>
-            <SelectTrigger>
-              <SelectValue placeholder="Topic" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All topics</SelectItem>
-              {topics.map((t) => (
-                <SelectItem key={t.slug} value={t.slug}>
-                  {t.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={difficulty} onValueChange={(v) => setDifficulty(v ?? "all")}>
-            <SelectTrigger>
-              <SelectValue placeholder="Difficulty" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All difficulties</SelectItem>
-              <SelectItem value="EASY">Easy</SelectItem>
-              <SelectItem value="MEDIUM">Medium</SelectItem>
-              <SelectItem value="HARD">Hard</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={status} onValueChange={(v) => setStatus(v ?? "all")}>
-            <SelectTrigger>
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All statuses</SelectItem>
-              <SelectItem value="SOLVED">Solved</SelectItem>
-              <SelectItem value="ATTEMPTED">Attempted</SelectItem>
-              <SelectItem value="NOT_ATTEMPTED">Unsolved</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={sort} onValueChange={(v) => setSort(v ?? "popularity")}>
-            <SelectTrigger>
-              <SelectValue placeholder="Sort" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="popularity">Popularity</SelectItem>
-              <SelectItem value="difficulty">Difficulty</SelectItem>
-              <SelectItem value="recent">Recently added</SelectItem>
-              <SelectItem value="company">Company frequency</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="space-y-1 lg:col-span-2">
+            <span className="text-xs font-medium text-muted-foreground">Search</span>
+            <Input
+              placeholder="Search by title..."
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              className="w-full"
+            />
+          </div>
+          <div className="space-y-1">
+            <span className="text-xs font-medium text-muted-foreground">Company</span>
+            <Select value={company} onValueChange={(v) => setCompany(v ?? "all")}>
+              <SelectTrigger className="w-full"><SelectValue placeholder="Company" /></SelectTrigger>
+              <SelectContent><SelectItem value="all">All companies</SelectItem>{companies.map((c) => <SelectItem key={c.slug} value={c.slug}>{c.name}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <span className="text-xs font-medium text-muted-foreground">Topic</span>
+            <Select value={topic} onValueChange={(v) => setTopic(v ?? "all")}>
+              <SelectTrigger className="w-full"><SelectValue placeholder="Topic" /></SelectTrigger>
+              <SelectContent className="min-w-52"><SelectItem value="all">All topics</SelectItem>{topics.map((t) => <SelectItem key={t.slug} value={t.slug}>{t.name}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <span className="text-xs font-medium text-muted-foreground">Difficulty</span>
+            <Select value={difficulty} onValueChange={(v) => setDifficulty(v ?? "all")}>
+              <SelectTrigger className="w-full"><SelectValue placeholder="Difficulty" /></SelectTrigger>
+              <SelectContent><SelectItem value="all">All difficulties</SelectItem><SelectItem value="EASY">Easy</SelectItem><SelectItem value="MEDIUM">Medium</SelectItem><SelectItem value="HARD">Hard</SelectItem></SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <span className="text-xs font-medium text-muted-foreground">Status</span>
+            <Select value={status} onValueChange={(v) => setStatus(v ?? "all")}>
+              <SelectTrigger className="w-full"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent><SelectItem value="all">All statuses</SelectItem><SelectItem value="SOLVED">Solved</SelectItem><SelectItem value="ATTEMPTED">Attempted</SelectItem><SelectItem value="NOT_ATTEMPTED">Unsolved</SelectItem></SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <span className="text-xs font-medium text-muted-foreground">Sort by</span>
+            <Select value={sort} onValueChange={(v) => setSort(v ?? "popularity")}>
+              <SelectTrigger className="w-full"><SelectValue placeholder="Sort" /></SelectTrigger>
+              <SelectContent><SelectItem value="popularity">Popularity</SelectItem><SelectItem value="difficulty">Difficulty</SelectItem><SelectItem value="recent">Recently added</SelectItem><SelectItem value="company">Company frequency</SelectItem></SelectContent>
+            </Select>
+          </div>
         </div>
 
         {error ? (
