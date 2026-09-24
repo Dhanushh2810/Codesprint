@@ -16,6 +16,7 @@ export const COMPANIES = [
   { name: "PayPal", slug: "paypal", accentColor: "#003087" },
   { name: "Meesho", slug: "meesho", accentColor: "#9F2089" },
   { name: "Netflix", slug: "netflix", accentColor: "#E50914" },
+  { name: "Teradata", slug: "teradata", accentColor: "#1F5A8A" },
 ];
 
 export const TOPICS = [
@@ -578,6 +579,41 @@ Line 2: \`n\` space-separated integers`,
     ["meta", "salesforce", "oracle"],
     { input: "rabbbit\nrabbit", output: "3" }
   ),
+  {
+    title: "Binary Palindromic Numbers",
+    slug: "binary-palindromic-numbers",
+    difficulty: "MEDIUM",
+    topics: ["Math", "Bit Manipulation", "Binary Search"],
+    companies: ["teradata"],
+    popularity: 58,
+    description: `Given a number N, you are required to convert it into a binary palindromic number.
+
+A binary palindromic number is a number whose binary representation is a palindrome.
+
+You can perform the following two operations on the provided number:
+- Increase the value of the number by 1
+- Decrease the value of the number by 1
+
+Calculate the minimum number of operations required to convert the given number into a binary palindromic number.
+
+The number must be represented using the minimum number of bits, ignoring leading zeros in its binary representation.`,
+    constraints: `- 1 <= N <= 2 × 10^9
+- You can perform at most one increment or decrement per operation
+- Return the minimum number of operations required`,
+    examples: [
+      {
+        input: "2",
+        output: "1",
+        explanation: "Binary of 2 is 10, which is not a palindrome. By increasing it to 3, binary becomes 11, which is a palindrome. So the minimum operations required is 1.",
+      },
+    ],
+    sampleTests: [{ input: "2", output: "1" }],
+    hiddenTests: [
+      { input: "1", output: "0" },
+      { input: "15", output: "0" },
+      { input: "10", output: "1" },
+    ],
+  },
 ];
 
 // Fix invalid company slugs from typo
