@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Code2, LogOut, ShieldAlert, User as UserIcon } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -18,64 +17,26 @@ const navLinks = [
   { href: "/admin", label: "Admin" },
 ];
 
-function getCookie(name: string) {
-  if (typeof document === "undefined") return null;
-  const v = document.cookie.match("(^|;) ?" + name + "=([^;]*)(;|$)");
-  return v ? decodeURIComponent(v[2]) : null;
-}
+const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? "")
+  .split(",")
+  .map((value) => value.trim().toLowerCase())
+  .filter(Boolean);
 
 export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [email, setEmail] = useState<string | null>(null);
+  const isAdmin = Boolean(email && adminEmails.includes(email.toLowerCase()));
 
   useEffect(() => {
-    try {
-      const supabase = createClient();
-      supabase.auth.getUser().then(({ data }) => {
-        if (data.user?.email) {
-          setEmail(data.user.email);
-        } else {
-          checkDevCookie();
-        }
-      }).catch(checkDevCookie);
-
-      const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-        if (session?.user?.email) {
-          setEmail(session.user.email);
-        } else {
-          checkDevCookie();
-        }
-      });
-      return () => sub.subscription.unsubscribe();
-    } catch {
-      checkDevCookie();
-    }
+    fetch("/api/auth/me").then(async (response) => {
+      const data = await response.json();
+      setEmail(response.ok ? data.user?.email ?? null : null);
+    }).catch(() => setEmail(null));
   }, [pathname]);
 
-  function checkDevCookie() {
-    const devCookie = getCookie("codesprint_dev_user") || getCookie("codetarget_dev_user");
-    if (devCookie) {
-      try {
-        const parsed = JSON.parse(devCookie);
-        setEmail(parsed.email || "demo@codesprint.com");
-      } catch {
-        setEmail(null);
-      }
-    } else {
-      setEmail(null);
-    }
-  }
-
   async function logout() {
-    try {
-      const supabase = createClient();
-      await supabase.auth.signOut();
-    } catch {
-      // ignore
-    }
-    document.cookie = "codesprint_dev_user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    document.cookie = "codetarget_dev_user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    await fetch("/api/auth/logout", { method: "POST" });
     setEmail(null);
     router.push("/");
     router.refresh();
@@ -94,7 +55,7 @@ export function Navbar() {
             </span>
           </Link>
           <nav className="hidden items-center gap-1 md:flex">
-            {navLinks.map((link) => (
+            {navLinks.filter((link) => link.href !== "/admin" || isAdmin).map((link) => (
               <Link
                 key={link.href}
                 href={link.href}

@@ -4,20 +4,10 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-
-async function syncProfile() {
-  await fetch("/api/auth/sync", { method: "POST" });
-}
-
-function setDevSession(user: { id: string; email: string; name: string; college?: string; graduationYear?: string }) {
-  const value = JSON.stringify(user);
-  document.cookie = `codetarget_dev_user=${encodeURIComponent(value)}; path=/; max-age=2592000; SameSite=Lax`;
-}
 
 export function LoginForm() {
   const router = useRouter();
@@ -31,26 +21,23 @@ export function LoginForm() {
     setLoading(true);
 
     try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        if (process.env.NODE_ENV === "production") {
-          toast.error(error.message);
-          return;
-        }
-        const name = email.split("@")[0] || "User";
-        setDevSession({ id: `user_${email.replace(/[^a-zA-Z0-9]/g, "_")}`, email, name });
-      }
-    } catch {
-      if (process.env.NODE_ENV === "production") {
-        toast.error("Unable to connect to authentication service");
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        toast.error(result.error || "Unable to log in");
+        setLoading(false);
         return;
       }
-      const name = email.split("@")[0] || "User";
-      setDevSession({ id: `user_${email.replace(/[^a-zA-Z0-9]/g, "_")}`, email, name });
+    } catch {
+      toast.error("Unable to connect to authentication service");
+      setLoading(false);
+      return;
     }
 
-    await syncProfile();
     setLoading(false);
     toast.success("Welcome back");
     router.push(searchParams.get("redirect") ?? "/dashboard");
@@ -115,46 +102,29 @@ export function SignUpForm() {
     setLoading(true);
 
     try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.signUp({
-        email: form.email,
-        password: form.password,
-        options: {
-          data: {
-            name: form.name,
-            college: form.college || undefined,
-            graduationYear: form.graduationYear || undefined,
-          },
-        },
-      });
-      if (error) {
-        if (process.env.NODE_ENV === "production") {
-          toast.error(error.message);
-          return;
-        }
-        setDevSession({
-          id: `user_${form.email.replace(/[^a-zA-Z0-9]/g, "_")}`,
-          email: form.email,
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           name: form.name,
+          email: form.email,
+          password: form.password,
           college: form.college,
-          graduationYear: form.graduationYear,
-        });
-      }
-    } catch {
-      if (process.env.NODE_ENV === "production") {
-        toast.error("Unable to connect to authentication service");
+          graduationYear: form.graduationYear ? Number(form.graduationYear) : null,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        toast.error(result.error || "Unable to create account");
+        setLoading(false);
         return;
       }
-      setDevSession({
-        id: `user_${form.email.replace(/[^a-zA-Z0-9]/g, "_")}`,
-        email: form.email,
-        name: form.name,
-        college: form.college,
-        graduationYear: form.graduationYear,
-      });
+    } catch {
+      toast.error("Unable to connect to authentication service");
+      setLoading(false);
+      return;
     }
 
-    await syncProfile();
     setLoading(false);
     toast.success("Account created");
     router.push("/onboarding");

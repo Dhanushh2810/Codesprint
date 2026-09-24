@@ -1,43 +1,19 @@
 import type { SkillLevel } from "@prisma/client";
-import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
-import { createClient } from "@/lib/supabase/server";
+import { getCustomAuthUser, isAdminEmail } from "@/lib/auth/custom";
 
 export async function getAuthUser() {
-  try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (user) return user;
-  } catch {
-    // Supabase auth error or unconfigured
-  }
-
-  if (process.env.NODE_ENV !== "production") {
-    try {
-      const cookieStore = await cookies();
-      const devVal = cookieStore.get("codesprint_dev_user")?.value || cookieStore.get("codetarget_dev_user")?.value;
-      if (devVal) {
-        const parsed = JSON.parse(devVal);
-        if (parsed?.id) {
-          return {
-            id: parsed.id,
-            email: parsed.email ?? "dev@codesprint.com",
-            user_metadata: {
-              name: parsed.name ?? "Demo User",
-              college: parsed.college,
-              graduationYear: parsed.graduationYear,
-            },
-          } as any;
-        }
-      }
-    } catch {
-      // Cookie error
-    }
-  }
-
-  return null;
+  const user = await getCustomAuthUser();
+  if (!user) return null;
+  return {
+    id: user.id,
+    email: user.email,
+    user_metadata: {
+      name: user.name,
+      college: user.college,
+      graduationYear: user.graduationYear,
+    },
+  };
 }
 
 export async function getCurrentUserProfile() {
@@ -103,12 +79,7 @@ export async function requireUser() {
 
 export async function requireAdmin() {
   const result = await requireUser();
-  const allowedEmails = (process.env.ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean);
-
-  if (!result.authUser.email || !allowedEmails.includes(result.authUser.email.toLowerCase())) {
+  if (!isAdminEmail(result.authUser.email)) {
     throw new Error("FORBIDDEN");
   }
 
