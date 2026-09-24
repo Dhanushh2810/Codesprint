@@ -1,6 +1,6 @@
-# Prepwise
+# CodeSprint
 
-Prepwise is a company-focused coding interview preparation platform built with Next.js, Prisma, and PostgreSQL. It helps users practice company-specific problems, track target companies, solve coding questions in the browser, and monitor preparation progress with analytics.
+CodeSprint is a company-focused coding interview preparation platform built with Next.js, Prisma, and PostgreSQL. It helps users practice company-specific problems, track target companies, solve coding questions in the browser, and monitor preparation progress with analytics.
 
 This app is designed for placement preparation and includes:
 
