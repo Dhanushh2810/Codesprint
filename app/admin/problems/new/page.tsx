@@ -9,10 +9,12 @@ import {
   Building2,
   Check,
   Code2,
+  FileJson,
   Plus,
   Save,
   Sparkles,
   Trash2,
+  Upload,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { CompanyAvatar } from "@/components/companies/company-avatar";
@@ -49,6 +51,8 @@ export default function NewProblemPage() {
   const [newCompanyColor, setNewCompanyColor] = useState("#6366f1");
   const [creatingCompany, setCreatingCompany] = useState(false);
   const [showNewCompanyForm, setShowNewCompanyForm] = useState(false);
+  const [jsonImport, setJsonImport] = useState("");
+  const [jsonImportError, setJsonImportError] = useState("");
 
   // Form State
   const [title, setTitle] = useState("");
@@ -80,6 +84,81 @@ export default function NewProblemPage() {
   const [starterJava, setStarterJava] = useState(DEFAULT_STARTER_CODE.java);
   const [starterPython, setStarterPython] = useState(DEFAULT_STARTER_CODE.python);
   const [starterJs, setStarterJs] = useState(DEFAULT_STARTER_CODE.javascript);
+
+  const getText = (value: unknown) => (typeof value === "string" ? value : "");
+
+  const getNames = (value: unknown) => {
+    if (!Array.isArray(value)) return [];
+    return value
+      .map((item) => (typeof item === "string" ? item : item && typeof item === "object" && "name" in item ? String(item.name) : ""))
+      .filter(Boolean);
+  };
+
+  const importQuestionJson = (rawJson: string) => {
+    setJsonImportError("");
+    try {
+      const parsed = JSON.parse(rawJson) as Record<string, unknown>;
+      const question = (parsed.question && typeof parsed.question === "object" ? parsed.question : parsed) as Record<string, unknown>;
+      const companyValues = getNames(question.companyNames ?? question.companies ?? question.targetCompanies ?? question.companyTags);
+      const topicValues = getNames(question.topicNames ?? question.topics);
+      const companyIds = companyValues.length
+        ? companies.filter((company) => companyValues.some((name) => name.toLowerCase() === company.name.toLowerCase() || name.toLowerCase() === company.slug.toLowerCase())).map((company) => company.id)
+        : getNames(question.companyIds);
+      const topicIds = topicValues.length
+        ? topics.filter((topic) => topicValues.some((name) => name.toLowerCase() === topic.name.toLowerCase() || name.toLowerCase() === topic.slug.toLowerCase())).map((topic) => topic.id)
+        : getNames(question.topicIds);
+
+      const rawExamples = Array.isArray(question.examples) ? question.examples : [];
+      const rawTests = Array.isArray(question.testCases) ? question.testCases : [];
+      const importedExamples = rawExamples.map((example) => {
+        const item = example as Record<string, unknown>;
+        return { input: getText(item.input), output: getText(item.output ?? item.expectedOutput), explanation: getText(item.explanation) };
+      });
+      const importedSamples = (Array.isArray(question.sampleTestCases) ? question.sampleTestCases : rawTests.filter((test) => (test as Record<string, unknown>).isSample === true)).map((test) => {
+        const item = test as Record<string, unknown>;
+        return { input: getText(item.input), expectedOutput: getText(item.expectedOutput ?? item.output) };
+      });
+      const importedHidden = (Array.isArray(question.hiddenTestCases) ? question.hiddenTestCases : rawTests.filter((test) => (test as Record<string, unknown>).isSample !== true)).map((test) => {
+        const item = test as Record<string, unknown>;
+        return { input: getText(item.input), expectedOutput: getText(item.expectedOutput ?? item.output) };
+      });
+      const starterCode = question.starterCode as Record<string, unknown> | undefined;
+
+      setTitle(getText(question.title));
+      setSlug(getText(question.slug) || getText(question.title).toLowerCase().trim().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-"));
+      setDifficulty(question.difficulty === "EASY" || question.difficulty === "HARD" ? question.difficulty : "MEDIUM");
+      setDescription(getText(question.description ?? question.problemDescription));
+      setConstraints(getText(question.constraints) || "- Add constraints");
+      setFollowUp(getText(question.followUp));
+      setPopularity(typeof question.popularity === "number" ? question.popularity : 50);
+      setSelectedCompanies(new Set(companyIds));
+      setSelectedTopics(new Set(topicIds));
+      setExamples(importedExamples.length ? importedExamples : [{ input: "", output: "", explanation: "" }]);
+      setSampleTestCases(importedSamples.length ? importedSamples : [{ input: "", expectedOutput: "" }]);
+      setHiddenTestCases(importedHidden.length ? importedHidden : [{ input: "", expectedOutput: "" }]);
+      if (starterCode?.cpp) setStarterCpp(String(starterCode.cpp));
+      if (starterCode?.java) setStarterJava(String(starterCode.java));
+      if (starterCode?.python) setStarterPython(String(starterCode.python));
+      if (starterCode?.javascript) setStarterJs(String(starterCode.javascript));
+
+      const missingCompanies = companyValues.filter((name) => !companies.some((company) => name.toLowerCase() === company.name.toLowerCase() || name.toLowerCase() === company.slug.toLowerCase()));
+      const missingTopics = topicValues.filter((name) => !topics.some((topic) => name.toLowerCase() === topic.name.toLowerCase() || name.toLowerCase() === topic.slug.toLowerCase()));
+      if (missingCompanies.length || missingTopics.length) {
+        setJsonImportError(`Imported, but not found in the database: ${[...missingCompanies, ...missingTopics].join(", ")}. Add them first, then select them before publishing.`);
+      }
+    } catch {
+      setJsonImportError("Invalid JSON. Paste only the JSON object, without Markdown code fences.");
+    }
+  };
+
+  const handleJsonFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    setJsonImport(text);
+    importQuestionJson(text);
+    event.target.value = "";
+  };
 
   useEffect(() => {
     Promise.all([fetch("/api/companies"), fetch("/api/topics")]).then(async ([cRes, tRes]) => {
@@ -280,6 +359,37 @@ export default function NewProblemPage() {
             <h1 className="text-2xl font-bold tracking-tight">Add New Question</h1>
           </div>
         </div>
+
+        <Card className="border-primary/30 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <FileJson className="h-5 w-5 text-primary" />
+              Import Question JSON
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Ask ChatGPT for the JSON format below, paste it here or upload a .json file, then import it into the form.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <textarea
+              rows={8}
+              value={jsonImport}
+              onChange={(event) => setJsonImport(event.target.value)}
+              placeholder={'{\n  "title": "Binary Palindromic Numbers",\n  "companyNames": ["Teradata"],\n  "topicNames": ["Math", "Bit Manipulation", "Binary Search"],\n  ...\n}'}
+              className="w-full rounded-lg border bg-background p-3 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="button" onClick={() => importQuestionJson(jsonImport)} className="gap-2">
+                <Sparkles className="h-4 w-4" /> Import JSON into form
+              </Button>
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm font-medium transition-colors hover:bg-muted">
+                <Upload className="h-4 w-4" /> Upload .json file
+                <input type="file" accept="application/json,.json" onChange={handleJsonFile} className="sr-only" />
+              </label>
+            </div>
+            {jsonImportError && <p className="text-sm text-amber-700 dark:text-amber-300">{jsonImportError}</p>}
+          </CardContent>
+        </Card>
 
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Section 1: Metadata */}
